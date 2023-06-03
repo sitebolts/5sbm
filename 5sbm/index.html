@@ -1,0 +1,274 @@
+<html>
+<head>
+<title>5 Second BenchMark</title>
+<meta name="description" content="A quick and easy online benchmark tool that can be used to quickly estimate a device's CPU power.">
+<meta property="og:site_name" content="5 Second BenchMark">
+<meta property="og:image" content="http://5sbm.com/preview.png">
+<meta name="twitter:image" content="http://5sbm.com/preview.png">
+<link rel="image_src" href="http://5sbm.com/preview.png">
+<link rel="icon" type="image/ico" href="favicon.ico">
+<style>
+body, html
+{
+	margin: 0;
+	padding: 0;
+}
+
+#outer-container
+{
+	width: 100%;
+	height: 100%;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+#inner-container
+{
+	font-family: Calibri;
+	text-align: center;
+	width: 100%;
+	max-width: 800px;
+	padding: 20px;
+}
+
+/*
+#inner-container[data-info-visible] .benchmark-screen,
+#inner-container[data-info-visible] .benchmark-screen-learn-button,
+#inner-container:not([data-info-visible]) .info-screen,
+#inner-container:not([data-info-visible]) .info-screen-learn-button,
+{
+	display: none;
+}
+*/
+
+#inner-container:not([data-screen="benchmark-screen"]) .benchmark-screen,
+#inner-container:not([data-screen="benchmark-screen"]) .benchmark-screen-learn-button,
+#inner-container:not([data-screen="info-screen"]) .info-screen,
+#inner-container:not([data-screen="info-screen"]) .info-screen-learn-button,
+#inner-container:not([data-screen="secret-screen"]) .secret-screen,
+#inner-container:not([data-screen="secret-screen"]) .secret-screen-back-button
+{
+	display: none;
+}
+
+.scores
+{
+	font-weight: bold;
+	font-size: 24px;
+	margin: 30px 0 40px 0;
+}
+
+.site-title h1
+{
+	margin: 0 0 20px 0;
+}
+
+#toggle-info-button
+{
+	display: table;
+	margin: auto;
+	cursor: pointer;
+	padding: 1px 6px 3px 6px;
+	border: 1px solid #000;
+}
+
+.info-screen h2
+{
+	margin: 0 0 10px 0;
+}
+
+.info-screen p
+{
+	margin: 0 0 30px 0;
+}
+
+.info-screen span[title]
+{
+	cursor: help;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+}
+
+#secret-image
+{
+	margin-bottom: 30px;
+}
+
+</style>
+<script>
+document.addEventListener("DOMContentLoaded", function()
+{
+	function perform_test(num_threads, results_element_id)
+	{
+		var web_worker_code =
+		`
+			let score = 0;
+
+			let start_time = performance.now();
+
+			while (performance.now() - start_time < 5000)
+			{
+				let number = 1.0000000;
+			
+				for (let i = 0; i < 800000; i++)
+				{
+					number = number * 1.0000002;
+				}
+				
+				score += 1;
+			}
+			
+			self.postMessage(score);
+		`;
+
+		var URL = window.webkitURL || window.URL;
+		var bb = new Blob([web_worker_code], {type: 'text/javascript'});
+
+		web_worker_code = URL.createObjectURL(bb);
+		
+		var results_remaining = num_threads;
+		var total_score = 0;
+		
+		for (let i = 0; i < num_threads; i++)
+		{
+			let web_worker = new Worker(web_worker_code);
+
+			web_worker.addEventListener('message', function(e)
+			{
+				results_remaining -= 1;
+				
+				total_score += e.data;
+				
+				let formatted_score = Number(total_score).toLocaleString('en-US');
+				
+				if (results_remaining === 0)
+				{
+					document.querySelector(results_element_id).innerHTML = formatted_score;
+					
+					var event = new CustomEvent("benchmark-finished", {"num_threads": num_threads});
+					document.dispatchEvent(event);
+				}
+			}, false);
+		}
+	}
+	
+	let num_cores = navigator.hardwareConcurrency;
+	document.querySelector('#num-cores').innerHTML = num_cores;
+	
+	document.addEventListener("benchmark-finished", function(e)
+	{
+		window.setTimeout(function()
+		{
+			document.querySelector('#multi-thread-score').innerHTML = 'Checking...';
+			console.log('Now performing test');
+			perform_test(num_cores, '#multi-thread-score');
+		}, 10);
+	},
+	{once: true});
+	
+	window.setTimeout(function()
+	{
+		document.querySelector('#single-thread-score').innerHTML = 'Checking...';
+		console.log('Now performing test');
+		perform_test(1, '#single-thread-score');
+	}, 10);
+	
+	document.querySelector('#toggle-info-button').addEventListener('click', function(event)
+	{
+		let inner_container = document.querySelector('#inner-container')
+		let screen = inner_container.getAttribute('data-screen');
+		
+		switch (screen)
+		{
+			case 'benchmark-screen':
+			{
+				inner_container.setAttribute('data-screen', 'info-screen');
+				break;
+			}
+			
+			case 'info-screen':
+			{
+				inner_container.setAttribute('data-screen', 'benchmark-screen');
+				break;
+			}
+			
+			case 'secret-screen':
+			{
+				inner_container.setAttribute('data-screen', 'benchmark-screen');
+				break;
+			}
+		}
+		
+		document.querySelector('#inner-container').toggleAttribute('data-info-visible');
+	});
+	
+	let Secret=function(t){var e={addEvent:function(t,e,n,o){t.addEventListener?t.addEventListener(e,n,!1):t.attachEvent&&(t["e"+e+n]=n,t[e+n]=function(){t["e"+e+n](window.event,o)},t.attachEvent("on"+e,t[e+n]))},removeEvent:
+	function(t,e,n){t.removeEventListener?t.removeEventListener(e,n):t.attachEvent&&t.detachEvent(e)},input:"",pattern:"38384040373937396665",keydownHandler:function(t,n){if(n&&(e=n),e.input+=t?t.keyCode:event.keyCode,e.input.length>e.pattern.length
+	&&(e.input=e.input.substr(e.input.length-e.pattern.length)),e.input===e.pattern)return e.code(e._currentLink),e.input="",t.preventDefault(),!1},load:function(t){this._currentLink=t,this.addEvent(document,"keydown",this.keydownHandler,this),this.iphone.load(t)},unload:
+	function(){this.removeEvent(document,"keydown",this.keydownHandler),this.iphone.unload()},code:
+	function(t){window.location=t},iphone:{start_x:0,start_y:0,stop_x:0,stop_y:0,tap:!1,capture:!1,orig_keys:"",keys:["UP","UP","DOWN","DOWN","LEFT","RIGHT","LEFT","RIGHT","TAP","TAP"],input:[],code:function(t){e.code(t)},touchmoveHandler:
+	function(t){if(1===t.touches.length&&!0===e.iphone.capture){var n=t.touches[0];e.iphone.stop_x=n.pageX,e.iphone.stop_y=n.pageY,e.iphone.tap=!1,e.iphone.capture=!1,e.iphone.check_direction()}},touchendHandler:
+	function(){if(e.iphone.input.push(e.iphone.check_direction()),e.iphone.input.length>e.iphone.keys.length&&e.iphone.input.shift(),e.iphone.input.length===e.iphone.keys.length)
+	{for(var t=!0,n=0;n<e.iphone.keys.length;n++)e.iphone.input[n]!==e.iphone.keys[n]&&(t=!1);t&&e.iphone.code(e._currentLink)}},touchstartHandler:
+	function(t){e.iphone.start_x=t.changedTouches[0].pageX,e.iphone.start_y=t.changedTouches[0].pageY,e.iphone.tap=!0,e.iphone.capture=!0},load:function(t){this.orig_keys=this.keys,e.addEvent(document,"touchmove",this.touchmoveHandler),
+	e.addEvent(document,"touchend",this.touchendHandler,!1),e.addEvent(document,"touchstart",this.touchstartHandler)},unload:
+	function(){e.removeEvent(document,"touchmove",this.touchmoveHandler),e.removeEvent(document,"touchend",this.touchendHandler),e.removeEvent(document,"touchstart",this.touchstartHandler)},check_direction:
+	function(){return x_magnitude=Math.abs(this.start_x-this.stop_x),y_magnitude=Math.abs(this.start_y-this.stop_y),x=this.start_x-this.stop_x<0?"RIGHT":"LEFT",
+	y=this.start_y-this.stop_y<0?"DOWN":"UP",result=x_magnitude>y_magnitude?x:y,result=!0===this.tap?"TAP":result,result}}};return"string"==typeof t&&e.load(t),"function"==typeof t&&(e.code=t,e.load()),e};"undefined"!=typeof module
+	&&void 0!==module.exports?module.exports=Secret:"function"==typeof define&&define.amd?define([],function(){return Secret}):window.Secret=Secret;
+	new Secret(function()
+	{
+		document.querySelector('#secret-image').src = `data:image/webp;base64,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`;
+		document.querySelector('#inner-container').setAttribute('data-screen', 'secret-screen');
+	});
+});
+</script>
+</head>
+<body>
+	<div id="outer-container">
+		<div id="inner-container" data-screen="benchmark-screen">
+			<div class="benchmark-screen">
+				<div class="site-title">
+					<h1>5 Second BenchMark</h1>
+				</div>
+				<div class="scores">
+					<p>Number of CPU cores: <span id="num-cores">Checking...</span></p>
+					<p>Single-thread score: <span id="single-thread-score">Waiting...</span></p>
+					<p>Multi-thread score: <span id="multi-thread-score">Waiting...</span></p>
+				</div>
+			</div>
+			<div class="info-screen">
+				<h2>What is this?</h2>
+				<p>5 Second BenchMark (5SBM) is a quick and easy online benchmark tool that tests the power of your CPU.<br>A higher score means that your device can perform math calculations faster than a device with a lower score.</p>
+				<h2>How is the score calculated?</h2>
+				<p>5SBM uses a <span title="Read: I wrote it ages ago and forgot how it works.">patented top-secret algorithm</span> that analyzes your CPU and semi-accurately assesses its precise capabilities.</p>
+				<h2>I'm an angel investor. Can you tell me a bit about your company?</h2>
+				<p>5SBM is owned and operated by <a href="https://sitebolts.com">SiteBolts</a>. By harnessing the power of machine learning and leveraging the scalability of the cloud, our team is committed to providing elegant solutions to real-world problems in a sustainable fashion.<br>Also, there's probably some blockchain in there somewhere.</p>
+			</div>
+			<div class="secret-screen">
+				<img id="secret-image">
+			</div>
+			<div class="footer">
+				<div id="toggle-info-button"><span class="benchmark-screen-learn-button">Learn more</span><span class="info-screen-learn-button">Learn less</span><span class="secret-screen-back-button">Back</span></</div>
+			</div>
+		</div>
+	</div>
+</body>
+</html>
